@@ -1,10 +1,14 @@
 plugins {
   id 'com.github.johnrengelman.shadow' version '2.0.2'
   id 'java'
+  id 'maven-publish'
 }
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+group 'org.repositoryminer'
+version '1.0'
 
 sourceSets {
     main {
@@ -15,12 +19,73 @@ sourceSets {
 }
 
 repositories {
-     jcenter()
+    mavenCentral()
 }
 
 dependencies {
     shadow project(path: ':repositoryminer-core', configuration: 'shadow')
-    implementation 'org.eclipse.jdt:org.eclipse.jdt.core:3.13.102'
+    /*implementation ('org.eclipse.jdt:org.eclipse.jdt.core:3.13.102'){
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.runtime'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.resources'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.filesystem'
+    }
+
+    implementation ('org.eclipse.platform:org.eclipse.core.runtime:3.13.0'){
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.filesystem'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
+    }
+    implementation ('org.eclipse.platform:org.eclipse.equinox.common:3.10.200')
+    implementation ('org.eclipse.platform:org.eclipse.core.resources:3.13.200'){
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.filesystem'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.runtime'
+    }
+    implementation 'org.eclipse.platform:org.eclipse.core.filesystem:1.7.200'*/
+    /*implementation ('org.eclipse.jdt:org.eclipse.jdt.core')
+    constraints {
+        implementation('org.eclipse.jdt:org.eclipse.jdt.core:3.13.102!!') {
+            because 'previous versions have a bug impacting this application'
+        }
+        implementation('org.eclipse.platform:org.eclipse.core.runtime:3.13.0') {
+            because 'version 1.9 pulled from httpclient has bugs affecting this application'
+        }
+        implementation('org.eclipse.platform:org.eclipse.equinox.common:3.10.200'){
+            because ''
+        }
+        implementation('org.eclipse.platform:org.eclipse.core.resources:3.13.200')
+        implementation('org.eclipse.platform:org.eclipse.core.filesystem:1.7.200')
+    }*/
+    implementation ('org.eclipse.jdt:org.eclipse.jdt.core:3.13.102'){
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.runtime'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
+    }
+
+    implementation ('org.eclipse.platform:org.eclipse.core.runtime:3.13.0'){
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
+    }
+    implementation ('org.eclipse.platform:org.eclipse.equinox.common:3.10.200')
+
     testImplementation 'org.mongodb:mongo-java-driver:3.2.2'
     testImplementation 'commons-io:commons-io:2.5'
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            project.shadow.component(publication)
+        }
+        maven(MavenPublication) {
+            groupId = 'org.repositoryminer'
+            artifactId = 'metrics'
+            version = '1.0'
+
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            url "http://repo.myorg.com"
+        }
+    }
 }
