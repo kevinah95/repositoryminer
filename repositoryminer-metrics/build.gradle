@@ -72,7 +72,7 @@ dependencies {
         exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
     }
 
-    implementation ('org.eclipse.platform:org.eclipse.core.runtime:3.13.0'){
+    implementation ('org.eclipse.platform:org.eclipse.core.runtime:3.19.0'){
         exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
         exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.jobs'
     }
@@ -81,24 +81,13 @@ dependencies {
         exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
     }
 
-    implementation ('org.eclipse.platform:org.eclipse.equinox.common:3.10.200')
+    implementation ('org.eclipse.platform:org.eclipse.equinox.common:3.13.0')
 
     testImplementation 'org.mongodb:mongo-java-driver:3.2.2'
     testImplementation 'commons-io:commons-io:2.5'
 }
 
-configurations.all {
-    resolutionStrategy {
-        eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.eclipse.platform' && details.requested.name == 'org.eclipse.core.runtime') {
-                details.useVersion "3.13.0"
-            }
-            if (details.requested.group == 'org.eclipse.platform' && details.requested.name == 'org.eclipse.equinox.common') {
-                details.useVersion("3.10.200")
-            }
-        }
-    }
-}
+
 
 publishing {
     publications {
