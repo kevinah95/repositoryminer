@@ -4,8 +4,8 @@ plugins {
   id 'maven-publish'
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
 group 'org.repositoryminer'
 version '1.0'
@@ -57,16 +57,47 @@ dependencies {
     }*/
     implementation ('org.eclipse.jdt:org.eclipse.jdt.core:3.13.102'){
         exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.runtime'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.resources'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.filesystem'
+    }
+
+    implementation ('org.eclipse.platform:org.eclipse.core.resources:3.13.200'){
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.runtime'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.expressions'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.filesystem'
+    }
+
+    implementation ('org.eclipse.platform:org.eclipse.core.filesystem:1.7.200'){
         exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
     }
 
     implementation ('org.eclipse.platform:org.eclipse.core.runtime:3.13.0'){
         exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.core.jobs'
     }
+
+    implementation ('org.eclipse.platform:org.eclipse.core.jobs:3.10.200'){
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.equinox.common'
+    }
+
     implementation ('org.eclipse.platform:org.eclipse.equinox.common:3.10.200')
 
     testImplementation 'org.mongodb:mongo-java-driver:3.2.2'
     testImplementation 'commons-io:commons-io:2.5'
+}
+
+configurations.all {
+    resolutionStrategy {
+        eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.eclipse.platform' && details.requested.name == 'org.eclipse.core.runtime') {
+                details.useVersion "3.13.0"
+            }
+            if (details.requested.group == 'org.eclipse.platform' && details.requested.name == 'org.eclipse.equinox.common') {
+                details.useVersion("3.10.200")
+            }
+        }
+    }
 }
 
 publishing {
