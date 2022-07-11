@@ -3,6 +3,7 @@ package org.repositoryminer.scm;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -18,14 +19,11 @@ import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.RevisionSyntaxException;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.repositoryminer.RepositoryMinerException;
 import org.repositoryminer.domain.Change;
@@ -298,13 +296,34 @@ public class GitSCM implements ISCM {
 
 		List<Change> changes = new ArrayList<Change>();
 		for (DiffEntry entry : diffEntries) {
+			String content = "";
+			String contentBefore = "";
+
+			if(entry.getNewPath() != DiffEntry.DEV_NULL){
+				content = getCommitContent(commit, entry.getNewPath());
+			}
+			if(entry.getOldPath() != DiffEntry.DEV_NULL){
+				contentBefore = getCommitContent(parentCommit, entry.getOldPath());
+			}
+
 			Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
-					ChangeType.valueOf(entry.getChangeType().name()));
+					ChangeType.valueOf(entry.getChangeType().name()), content, contentBefore);
 			analyzeDiff(change, entry);
 			changes.add(change);
 		}
 
 		return changes;
+	}
+
+	private String getCommitContent(RevCommit commit, String path) throws IOException {
+		try (TreeWalk treeWalk = TreeWalk.forPath(git.getRepository(), path, commit.getTree())) {
+			ObjectId blobId = treeWalk.getObjectId(0);
+			try (ObjectReader objectReader = git.getRepository().newObjectReader()) {
+				ObjectLoader objectLoader = objectReader.open(blobId);
+				byte[] bytes = objectLoader.getBytes();
+				return new String(bytes, StandardCharsets.UTF_8);
+			}
+		}
 	}
 
 	private void analyzeDiff(Change change, DiffEntry diff) throws IOException {
