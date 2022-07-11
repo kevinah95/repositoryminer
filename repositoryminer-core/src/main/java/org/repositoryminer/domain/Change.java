@@ -15,6 +15,8 @@ public class Change {
 	private int linesAdded;
 	private int linesRemoved;
 	private ChangeType type;
+	private String content;
+	private String contentBefore;
 
 	/**
 	 * Converts documents to changes.
@@ -31,7 +33,7 @@ public class Change {
 		for (Document doc : documents) {
 			Change change = new Change(doc.getString("new_path"), doc.getString("old_path"),
 					doc.getInteger("lines_added", 0), doc.getInteger("lines_removed", 0),
-					ChangeType.valueOf(doc.getString("type")));
+					ChangeType.valueOf(doc.getString("type")), doc.getString("content"), doc.getString("content_before"));
 			changes.add(change);
 		}
 		return changes;
@@ -50,7 +52,9 @@ public class Change {
 			Document doc = new Document();
 			doc.append("new_path", c.getNewPath()).append("old_path", c.getOldPath())
 					.append("lines_added", c.getLinesAdded()).append("lines_removed", c.getLinesRemoved())
-					.append("type", c.getType().toString());
+					.append("type", c.getType().toString())
+					.append("content", c.getContent())
+					.append("content_before", c.getContentBefore());
 			list.add(doc);
 		}
 		return list;
@@ -59,13 +63,15 @@ public class Change {
 	public Change() {
 	}
 
-	public Change(String newPath, String oldPath, int linesAdded, int linesRemoved, ChangeType type) {
+	public Change(String newPath, String oldPath, int linesAdded, int linesRemoved, ChangeType type, String content, String contentBefore) {
 		super();
 		this.newPath = newPath;
 		this.oldPath = oldPath;
 		this.linesAdded = linesAdded;
 		this.linesRemoved = linesRemoved;
 		this.type = type;
+		this.content = content;
+		this.contentBefore = contentBefore;
 	}
 
 	public String getNewPath() {
@@ -106,6 +112,21 @@ public class Change {
 
 	public void setType(ChangeType type) {
 		this.type = type;
+	}
+	public String getContent() {
+		return content;
+	}
+
+	public void setContent(String content) {
+		this.content = content;
+	}
+
+	public String getContentBefore() {
+		return contentBefore;
+	}
+
+	public void setContentBefore(String contentBefore) {
+		this.contentBefore = contentBefore;
 	}
 
 }
