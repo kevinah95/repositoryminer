@@ -4,11 +4,25 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
+import ASTMCore.ASTMSource.CompilationUnit;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import gastmappers.Language;
+import gastmappers.Mapper;
+import gastmappers.MapperFactory;
+import gastmappers.exceptions.UnsupportedLanguageException;
+import metrics.*;
+import metrics.examcompletemetric.MetricClass;
+import metrics.examcompletemetric.MetricMethod;
+import metrics.examcompletemetric.MetricPackage;
+import metrics.exceptions.UnsupportedMetricException;
+import org.apache.commons.io.FilenameUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
@@ -24,7 +38,9 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.util.FileUtils;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
+import org.json.simple.JSONArray;
 import org.repositoryminer.RepositoryMinerException;
 import org.repositoryminer.domain.Change;
 import org.repositoryminer.domain.ChangeType;
@@ -262,7 +278,8 @@ public class GitSCM implements ISCM {
 		List<Change> changes = null;
 		try {
 			changes = getChangesForCommitedFiles(revCommit.getName());
-		} catch (IOException e) {
+		} catch (IOException | UnsupportedLanguageException | UnsupportedMetricException | SQLException |
+				 ClassNotFoundException e) {
 			close();
 			throw new RepositoryMinerException(e);
 		}
@@ -271,7 +288,7 @@ public class GitSCM implements ISCM {
 				parents, author.getWhen(), committer.getWhen(), (parents.size() > 1), null);
 	}
 
-	private List<Change> getChangesForCommitedFiles(String hash) throws IOException {
+	private List<Change> getChangesForCommitedFiles(String hash) throws IOException, UnsupportedLanguageException, UnsupportedMetricException, SQLException, ClassNotFoundException {
 		RevWalk revWalk = new RevWalk(git.getRepository());
 		RevCommit commit = revWalk.parseCommit(ObjectId.fromString(hash));
 
@@ -301,18 +318,42 @@ public class GitSCM implements ISCM {
 
 			if(entry.getNewPath() != DiffEntry.DEV_NULL){
 				content = getCommitContent(commit, entry.getNewPath());
+				String filename = getFilename(entry.getNewPath(), entry.getOldPath());
+				String extension = FilenameUtils.getExtension(filename);
+				if(extension.equals("java")){
+					String analysis = executeAnalyzer(content, Language.JAVA);
+				}
 			}
 			if(entry.getOldPath() != DiffEntry.DEV_NULL){
 				contentBefore = getCommitContent(parentCommit, entry.getOldPath());
+				String filename = getFilename(entry.getNewPath(), entry.getOldPath());
+				String extension = FilenameUtils.getExtension(filename);
+				if(extension.equals("java")){
+					String analysis = executeAnalyzer(contentBefore, Language.JAVA);
+				}
 			}
+
+
 
 			Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
 					ChangeType.valueOf(entry.getChangeType().name()), content, contentBefore);
+
 			analyzeDiff(change, entry);
 			changes.add(change);
 		}
 
 		return changes;
+	}
+
+	private String getFilename(String newPath, String oldPath){
+		String path;
+		if(newPath != null && newPath != DiffEntry.DEV_NULL){
+			path = newPath;
+		}else{
+			path = oldPath;
+		}
+
+		return FilenameUtils.getName(path);
 	}
 
 	private String getCommitContent(RevCommit commit, String path) throws IOException {
@@ -383,5 +424,89 @@ public class GitSCM implements ISCM {
 			throw new RepositoryMinerException(e);
 		}
 	}
+
+	private String executeAnalyzer(String sourceCode, Language language) throws UnsupportedMetricException, IOException, UnsupportedLanguageException, SQLException, ClassNotFoundException {
+		MetricFactory metricFactory = new MetricFactory();
+		//Get the metric from JSON.
+		MetricEnum newMetricEnum = MetricEnum.getMetricFromString(MetricEnum.LOC.toString());
+		//Get the Metric from the Factory.
+		AbstractMetric specificMetric = metricFactory.createMetric(newMetricEnum);
+		//Each mapper knows how to process the inputParameters
+		JSONArray inputParameters = new JSONArray();
+		AbstractInput input = specificMetric.createSpecificInput(inputParameters);
+
+		ArrayList<OutputMapperObject> CUGast = new ArrayList<>();
+		//Process a single file
+		OutputMapperObject fileCU = readFromSpecificLanguage(sourceCode,  language);
+		//Add the file
+		CUGast.add(fileCU);
+
+		ArrayList<ArrayList<ArrayList<String>>> pathsJSON = new ArrayList<ArrayList<ArrayList<String>>>();
+		ArrayList<ArrayList<ArrayList<CompilationUnit>>> gastObjects = new ArrayList<ArrayList<ArrayList<CompilationUnit>>>();
+
+		ArrayList<ArrayList<String>> jsonAux = new ArrayList<ArrayList<String>>();
+		ArrayList<ArrayList<CompilationUnit>> gastAux = new ArrayList<ArrayList<CompilationUnit>>();
+		for (OutputMapperObject theOutputObject : CUGast) {
+			jsonAux.add(theOutputObject.gastAsJson);
+			gastAux.add(theOutputObject.gastAsObject);
+		}
+
+		pathsJSON.add(jsonAux);
+		gastObjects.add(gastAux);
+
+		input.gastJsonInputs = pathsJSON;
+		input.gastObjects = gastObjects;
+		input.language = language;
+
+		specificMetric.start(input);
+		Output output = specificMetric.exportOutput();
+		//Get the output as a file.
+		ArrayList<MetricPackage> metricResult  = output.getMetricResult();
+		/*for(MetricPackage p : metricResult){
+			for(MetricClass c: p.getPackageClasses()){
+				for(MetricMethod m: c.getMethods()){
+					m.getMethodName();
+				}
+			}
+		}*/
+		String ttJsonTemp = (new GsonBuilder()).setPrettyPrinting().create().toJson(metricResult);
+		return ttJsonTemp;
+	}
+
+	private OutputMapperObject readFromSpecificLanguage(String sourceCode, Language language) throws UnsupportedLanguageException, IOException {
+		ArrayList<String> fileCUGast = new ArrayList<>();
+		// Instance the mapper factory.
+		MapperFactory factory = new MapperFactory();
+
+		// Build the Java mapper.
+		Mapper mapper = factory.createMapper(language);
+		// Parse the file and obtain the GAST.
+		ArrayList<CompilationUnit> compilationUnits;
+
+		// Return the GAST from a file content.
+		compilationUnits = mapper.getGastCompilationUnitInMemory(sourceCode);
+
+		// Add the results in the parsed file list.
+		for (CompilationUnit compilationUnit : compilationUnits) {
+			// Transform the compilation unit into its JSON representation.
+			Gson gson = new Gson();
+			String jsonRepresentation = gson.toJson(compilationUnit);
+
+			// Remove the "null"'s values into a empty string.
+			jsonRepresentation = jsonRepresentation.replaceAll("null", "");
+			//Add the JSON
+			fileCUGast.add(jsonRepresentation);
+		}
+		OutputMapperObject newOutput = new OutputMapperObject();
+		newOutput.gastAsObject = compilationUnits;
+		newOutput.gastAsJson = fileCUGast;
+		return newOutput;
+	}
+
+}
+
+class OutputMapperObject {
+	public ArrayList<String> gastAsJson;
+	public ArrayList<CompilationUnit> gastAsObject;
 
 }

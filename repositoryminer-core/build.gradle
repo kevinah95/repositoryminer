@@ -29,6 +29,8 @@ dependencies {
     implementation 'org.mongodb:mongo-java-driver:3.2.2'
     implementation 'org.slf4j:slf4j-simple:1.7.21'
     implementation 'commons-io:commons-io:2.5'
+    implementation 'avib.coderetriever:avib.coderetriever.analyzer:1.0'
+    implementation 'avib.coderetriever:avib.coderetriever.mapper:1.0'
 }
 
 publishing {
