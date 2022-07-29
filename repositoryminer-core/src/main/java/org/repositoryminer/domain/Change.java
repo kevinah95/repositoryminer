@@ -17,6 +17,25 @@ public class Change {
 	private ChangeType type;
 	private String content;
 	private String contentBefore;
+	private int loc;
+
+	public int getLoc() {
+		return loc;
+	}
+
+	public void setLoc(int loc) {
+		this.loc = loc;
+	}
+
+	public int getLocBefore() {
+		return locBefore;
+	}
+
+	public void setLocBefore(int locBefore) {
+		this.locBefore = locBefore;
+	}
+
+	private int locBefore;
 
 	/**
 	 * Converts documents to changes.
@@ -33,7 +52,9 @@ public class Change {
 		for (Document doc : documents) {
 			Change change = new Change(doc.getString("new_path"), doc.getString("old_path"),
 					doc.getInteger("lines_added", 0), doc.getInteger("lines_removed", 0),
-					ChangeType.valueOf(doc.getString("type")), doc.getString("content"), doc.getString("content_before"));
+					ChangeType.valueOf(doc.getString("type")),
+					doc.getString("content"), doc.getString("content_before"),
+					doc.getInteger("loc"), doc.getInteger("locBefore"));
 			changes.add(change);
 		}
 		return changes;
@@ -54,7 +75,9 @@ public class Change {
 					.append("lines_added", c.getLinesAdded()).append("lines_removed", c.getLinesRemoved())
 					.append("type", c.getType().toString())
 					.append("content", c.getContent())
-					.append("content_before", c.getContentBefore());
+					.append("content_before", c.getContentBefore())
+					.append("loc", c.getLoc())
+					.append("locBefore", c.getLocBefore());
 			list.add(doc);
 		}
 		return list;
@@ -63,7 +86,11 @@ public class Change {
 	public Change() {
 	}
 
-	public Change(String newPath, String oldPath, int linesAdded, int linesRemoved, ChangeType type, String content, String contentBefore) {
+	public Change(String newPath, String oldPath,
+				  int linesAdded, int linesRemoved,
+				  ChangeType type,
+				  String content, String contentBefore,
+				  int loc, int locBefore) {
 		super();
 		this.newPath = newPath;
 		this.oldPath = oldPath;
@@ -72,6 +99,8 @@ public class Change {
 		this.type = type;
 		this.content = content;
 		this.contentBefore = contentBefore;
+		this.loc = loc;
+		this.locBefore = locBefore;
 	}
 
 	public String getNewPath() {

@@ -316,27 +316,30 @@ public class GitSCM implements ISCM {
 			String content = "";
 			String contentBefore = "";
 
+			int loc = 0;
+			int locBefore = 0;
 			if(entry.getNewPath() != DiffEntry.DEV_NULL){
 				content = getCommitContent(commit, entry.getNewPath());
 				String filename = getFilename(entry.getNewPath(), entry.getOldPath());
 				String extension = FilenameUtils.getExtension(filename);
 				if(extension.equals("java")){
-					String analysis = executeAnalyzer(content, Language.JAVA);
+					loc = executeAnalyzer(content, Language.JAVA);
 				}
 			}
+
 			if(entry.getOldPath() != DiffEntry.DEV_NULL){
 				contentBefore = getCommitContent(parentCommit, entry.getOldPath());
 				String filename = getFilename(entry.getNewPath(), entry.getOldPath());
 				String extension = FilenameUtils.getExtension(filename);
 				if(extension.equals("java")){
-					String analysis = executeAnalyzer(contentBefore, Language.JAVA);
+					locBefore = executeAnalyzer(contentBefore, Language.JAVA);
 				}
 			}
 
 
 
 			Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
-					ChangeType.valueOf(entry.getChangeType().name()), content, contentBefore);
+					ChangeType.valueOf(entry.getChangeType().name()), content, contentBefore, loc, locBefore);
 
 			analyzeDiff(change, entry);
 			changes.add(change);
@@ -425,7 +428,7 @@ public class GitSCM implements ISCM {
 		}
 	}
 
-	private String executeAnalyzer(String sourceCode, Language language) throws UnsupportedMetricException, IOException, UnsupportedLanguageException, SQLException, ClassNotFoundException {
+	private int executeAnalyzer(String sourceCode, Language language) throws UnsupportedMetricException, IOException, UnsupportedLanguageException, SQLException, ClassNotFoundException {
 		MetricFactory metricFactory = new MetricFactory();
 		//Get the metric from JSON.
 		MetricEnum newMetricEnum = MetricEnum.getMetricFromString(MetricEnum.LOC.toString());
@@ -462,15 +465,18 @@ public class GitSCM implements ISCM {
 		Output output = specificMetric.exportOutput();
 		//Get the output as a file.
 		ArrayList<MetricPackage> metricResult  = output.getMetricResult();
-		/*for(MetricPackage p : metricResult){
+
+		int loc = 0;
+		for(MetricPackage p : metricResult){
 			for(MetricClass c: p.getPackageClasses()){
 				for(MetricMethod m: c.getMethods()){
-					m.getMethodName();
+					loc += m.getLOC();
 				}
 			}
-		}*/
-		String ttJsonTemp = (new GsonBuilder()).setPrettyPrinting().create().toJson(metricResult);
-		return ttJsonTemp;
+		}
+
+		//String ttJsonTemp = (new GsonBuilder()).setPrettyPrinting().create().toJson(metricResult);
+		return loc;
 	}
 
 	private OutputMapperObject readFromSpecificLanguage(String sourceCode, Language language) throws UnsupportedLanguageException, IOException {
