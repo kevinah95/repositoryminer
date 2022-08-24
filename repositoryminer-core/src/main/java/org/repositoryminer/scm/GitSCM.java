@@ -34,6 +34,7 @@ import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.RevisionSyntaxException;
 import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
@@ -42,13 +43,7 @@ import org.eclipse.jgit.util.FileUtils;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.json.simple.JSONArray;
 import org.repositoryminer.RepositoryMinerException;
-import org.repositoryminer.domain.Change;
-import org.repositoryminer.domain.ChangeType;
-import org.repositoryminer.domain.Commit;
-import org.repositoryminer.domain.Developer;
-import org.repositoryminer.domain.Reference;
-import org.repositoryminer.domain.ReferenceType;
-import org.repositoryminer.domain.SCMType;
+import org.repositoryminer.domain.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -316,6 +311,7 @@ public class GitSCM implements ISCM {
 			String content = "";
 			String contentBefore = "";
 
+
 			int loc = 0;
 			int locBefore = 0;
 			if(entry.getNewPath() != DiffEntry.DEV_NULL){
@@ -339,7 +335,7 @@ public class GitSCM implements ISCM {
 
 
 			Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
-					ChangeType.valueOf(entry.getChangeType().name()), content, contentBefore, loc, locBefore);
+					ChangeType.valueOf(entry.getChangeType().name()), content, contentBefore, loc, locBefore, new ArrayList<Method>());
 
 			analyzeDiff(change, entry);
 			changes.add(change);
@@ -429,15 +425,7 @@ public class GitSCM implements ISCM {
 	}
 
 	private int executeAnalyzer(String sourceCode, Language language) throws UnsupportedMetricException, IOException, UnsupportedLanguageException, SQLException, ClassNotFoundException {
-		MetricFactory metricFactory = new MetricFactory();
-		//Get the metric from JSON.
-		MetricEnum newMetricEnum = MetricEnum.getMetricFromString(MetricEnum.LOC.toString());
-		//Get the Metric from the Factory.
-		AbstractMetric specificMetric = metricFactory.createMetric(newMetricEnum);
-		//Each mapper knows how to process the inputParameters
-		JSONArray inputParameters = new JSONArray();
-		AbstractInput input = specificMetric.createSpecificInput(inputParameters);
-
+		//START Repeated
 		ArrayList<OutputMapperObject> CUGast = new ArrayList<>();
 		//Process a single file
 		OutputMapperObject fileCU = readFromSpecificLanguage(sourceCode,  language);
@@ -456,6 +444,17 @@ public class GitSCM implements ISCM {
 
 		pathsJSON.add(jsonAux);
 		gastObjects.add(gastAux);
+		//END Repeated
+
+		MetricFactory metricFactory = new MetricFactory();
+		//Get the metric from JSON.
+		MetricEnum newMetricEnum = MetricEnum.getMetricFromString(MetricEnum.LOC.toString());
+		//Get the Metric from the Factory.
+		AbstractMetric specificMetric = metricFactory.createMetric(newMetricEnum);
+		//Each mapper knows how to process the inputParameters
+		JSONArray inputParameters = new JSONArray();
+		AbstractInput input = specificMetric.createSpecificInput(inputParameters);
+
 
 		input.gastJsonInputs = pathsJSON;
 		input.gastObjects = gastObjects;

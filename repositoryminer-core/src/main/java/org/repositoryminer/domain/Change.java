@@ -19,6 +19,16 @@ public class Change {
 	private String contentBefore;
 	private int loc;
 
+	public List<Method> getMethods() {
+		return methods;
+	}
+
+	public void setMethods(List<Method> methods) {
+		this.methods = methods;
+	}
+
+	private List<Method> methods;
+
 	public int getLoc() {
 		return loc;
 	}
@@ -54,7 +64,7 @@ public class Change {
 					doc.getInteger("lines_added", 0), doc.getInteger("lines_removed", 0),
 					ChangeType.valueOf(doc.getString("type")),
 					doc.getString("content"), doc.getString("content_before"),
-					doc.getInteger("loc"), doc.getInteger("locBefore"));
+					doc.getInteger("loc"), doc.getInteger("locBefore"), Method.parseDocuments(doc.get("methods", List.class)));
 			changes.add(change);
 		}
 		return changes;
@@ -77,7 +87,8 @@ public class Change {
 					.append("content", c.getContent())
 					.append("content_before", c.getContentBefore())
 					.append("loc", c.getLoc())
-					.append("locBefore", c.getLocBefore());
+					.append("locBefore", c.getLocBefore())
+					.append("methods", Method.toDocumentList(c.getMethods()));
 			list.add(doc);
 		}
 		return list;
@@ -90,7 +101,7 @@ public class Change {
 				  int linesAdded, int linesRemoved,
 				  ChangeType type,
 				  String content, String contentBefore,
-				  int loc, int locBefore) {
+				  int loc, int locBefore, List<Method> methods) {
 		super();
 		this.newPath = newPath;
 		this.oldPath = oldPath;
@@ -101,6 +112,7 @@ public class Change {
 		this.contentBefore = contentBefore;
 		this.loc = loc;
 		this.locBefore = locBefore;
+		this.methods = methods;
 	}
 
 	public String getNewPath() {
