@@ -12,7 +12,6 @@ import java.util.Set;
 
 import ASTMCore.ASTMSource.CompilationUnit;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import gastmappers.Language;
 import gastmappers.Mapper;
 import gastmappers.MapperFactory;
@@ -39,7 +38,6 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.util.FileUtils;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.json.simple.JSONArray;
 import org.repositoryminer.RepositoryMinerException;
@@ -445,10 +443,32 @@ public class GitSCM implements ISCM {
 		pathsJSON.add(jsonAux);
 		gastObjects.add(gastAux);
 		//END Repeated
+		int loc = 0, cyclo = 0;
+		ArrayList<MetricPackage> locMetricResult  = getMetricResult(MetricEnum.LOC.toString(), language, pathsJSON, gastObjects);
+		for(MetricPackage p : locMetricResult){
+			for(MetricClass c: p.getPackageClasses()){
+				for(MetricMethod m: c.getMethods()){
+					loc += m.getLOC();
+				}
+			}
+		}
 
+		ArrayList<MetricPackage> cycloMetricResult  = getMetricResult(MetricEnum.CYCLO.toString(), language, pathsJSON, gastObjects);
+		for(MetricPackage p : cycloMetricResult){
+			for(MetricClass c: p.getPackageClasses()){
+				for(MetricMethod m: c.getMethods()){
+					cyclo += m.getCYCLO();
+				}
+			}
+		}
+
+		return loc;
+	}
+
+	private ArrayList<MetricPackage> getMetricResult(String metric, Language language, ArrayList<ArrayList<ArrayList<String>>> pathsJSON, ArrayList<ArrayList<ArrayList<CompilationUnit>>> gastObjects) throws UnsupportedMetricException, SQLException, ClassNotFoundException {
 		MetricFactory metricFactory = new MetricFactory();
 		//Get the metric from JSON.
-		MetricEnum newMetricEnum = MetricEnum.getMetricFromString(MetricEnum.LOC.toString());
+		MetricEnum newMetricEnum = MetricEnum.getMetricFromString(metric);
 		//Get the Metric from the Factory.
 		AbstractMetric specificMetric = metricFactory.createMetric(newMetricEnum);
 		//Each mapper knows how to process the inputParameters
@@ -463,19 +483,7 @@ public class GitSCM implements ISCM {
 		specificMetric.start(input);
 		Output output = specificMetric.exportOutput();
 		//Get the output as a file.
-		ArrayList<MetricPackage> metricResult  = output.getMetricResult();
-
-		int loc = 0;
-		for(MetricPackage p : metricResult){
-			for(MetricClass c: p.getPackageClasses()){
-				for(MetricMethod m: c.getMethods()){
-					loc += m.getLOC();
-				}
-			}
-		}
-
-		//String ttJsonTemp = (new GsonBuilder()).setPrettyPrinting().create().toJson(metricResult);
-		return loc;
+		return output.getMetricResult();
 	}
 
 	private OutputMapperObject readFromSpecificLanguage(String sourceCode, Language language) throws UnsupportedLanguageException, IOException {
