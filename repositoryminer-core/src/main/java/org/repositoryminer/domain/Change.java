@@ -10,164 +10,183 @@ import org.bson.Document;
  */
 public class Change {
 
-	private String newPath;
-	private String oldPath;
-	private int linesAdded;
-	private int linesRemoved;
-	private ChangeType type;
-	private String content;
-	private String contentBefore;
-	private int loc;
+    private String newPath;
+    private String oldPath;
+    private int linesAdded;
+    private int linesRemoved;
+    private ChangeType type;
+    private String content;
+    private String contentBefore;
+    private int loc;
+    private List<Method> methods;
+    private int locBefore;
+    private int cyclo;
+    private int cycloBefore;
 
-	public List<Method> getMethods() {
-		return methods;
-	}
+    public Change() {
+    }
 
-	public void setMethods(List<Method> methods) {
-		this.methods = methods;
-	}
+    public Change(String newPath, String oldPath,
+                  int linesAdded, int linesRemoved,
+                  ChangeType type,
+                  String content, String contentBefore,
+                  int loc, int locBefore, int cyclo, int cycloBefore, List<Method> methods) {
+        super();
+        this.newPath = newPath;
+        this.oldPath = oldPath;
+        this.linesAdded = linesAdded;
+        this.linesRemoved = linesRemoved;
+        this.type = type;
+        this.content = content;
+        this.contentBefore = contentBefore;
+        this.loc = loc;
+        this.locBefore = locBefore;
+        this.cyclo = cyclo;
+        this.cycloBefore = cycloBefore;
+        this.methods = methods;
+    }
 
-	private List<Method> methods;
+    /**
+     * Converts documents to changes.
+     *
+     * @param documents
+     * @return a list of changes.
+     */
+    public static List<Change> parseDocuments(List<Document> documents) {
+        List<Change> changes = new ArrayList<Change>();
+        if (documents == null)
+            return changes;
 
-	public int getLoc() {
-		return loc;
-	}
+        for (Document doc : documents) {
+            Change change = new Change(doc.getString("new_path"), doc.getString("old_path"),
+                    doc.getInteger("lines_added", 0), doc.getInteger("lines_removed", 0),
+                    ChangeType.valueOf(doc.getString("type")),
+                    doc.getString("content"), doc.getString("content_before"),
+                    doc.getInteger("loc"), doc.getInteger("locBefore"), doc.getInteger("cyclo"), doc.getInteger("cycloBefore"), Method.parseDocuments(doc.get("methods", List.class)));
+            changes.add(change);
+        }
+        return changes;
+    }
 
-	public void setLoc(int loc) {
-		this.loc = loc;
-	}
+    /**
+     * Converts changes to documents.
+     *
+     * @param changes
+     * @return a list of documents.
+     */
+    public static List<Document> toDocumentList(List<Change> changes) {
+        List<Document> list = new ArrayList<Document>();
+        for (Change c : changes) {
+            Document doc = new Document();
+            doc.append("new_path", c.getNewPath()).append("old_path", c.getOldPath())
+                    .append("lines_added", c.getLinesAdded()).append("lines_removed", c.getLinesRemoved())
+                    .append("type", c.getType().toString())
+                    .append("content", c.getContent())
+                    .append("content_before", c.getContentBefore())
+                    .append("loc", c.getLoc())
+                    .append("locBefore", c.getLocBefore())
+                    .append("cyclo", c.getCyclo())
+                    .append("cycloBefore", c.getCycloBefore())
+                    .append("methods", Method.toDocumentList(c.getMethods()));
+            list.add(doc);
+        }
+        return list;
+    }
 
-	public int getLocBefore() {
-		return locBefore;
-	}
+    public List<Method> getMethods() {
+        return methods;
+    }
 
-	public void setLocBefore(int locBefore) {
-		this.locBefore = locBefore;
-	}
+    public void setMethods(List<Method> methods) {
+        this.methods = methods;
+    }
 
-	private int locBefore;
+    public int getLoc() {
+        return loc;
+    }
 
-	/**
-	 * Converts documents to changes.
-	 * 
-	 * @param documents
-	 * 
-	 * @return a list of changes.
-	 */
-	public static List<Change> parseDocuments(List<Document> documents) {
-		List<Change> changes = new ArrayList<Change>();
-		if (documents == null)
-			return changes;
+    public void setLoc(int loc) {
+        this.loc = loc;
+    }
 
-		for (Document doc : documents) {
-			Change change = new Change(doc.getString("new_path"), doc.getString("old_path"),
-					doc.getInteger("lines_added", 0), doc.getInteger("lines_removed", 0),
-					ChangeType.valueOf(doc.getString("type")),
-					doc.getString("content"), doc.getString("content_before"),
-					doc.getInteger("loc"), doc.getInteger("locBefore"), Method.parseDocuments(doc.get("methods", List.class)));
-			changes.add(change);
-		}
-		return changes;
-	}
+    public int getLocBefore() {
+        return locBefore;
+    }
 
-	/**
-	 * Converts changes to documents.
-	 * 
-	 * @param changes
-	 * 
-	 * @return a list of documents.
-	 */
-	public static List<Document> toDocumentList(List<Change> changes) {
-		List<Document> list = new ArrayList<Document>();
-		for (Change c : changes) {
-			Document doc = new Document();
-			doc.append("new_path", c.getNewPath()).append("old_path", c.getOldPath())
-					.append("lines_added", c.getLinesAdded()).append("lines_removed", c.getLinesRemoved())
-					.append("type", c.getType().toString())
-					.append("content", c.getContent())
-					.append("content_before", c.getContentBefore())
-					.append("loc", c.getLoc())
-					.append("locBefore", c.getLocBefore())
-					.append("methods", Method.toDocumentList(c.getMethods()));
-			list.add(doc);
-		}
-		return list;
-	}
+    public void setLocBefore(int locBefore) {
+        this.locBefore = locBefore;
+    }
 
-	public Change() {
-	}
+    public int getCyclo() {
+        return cyclo;
+    }
 
-	public Change(String newPath, String oldPath,
-				  int linesAdded, int linesRemoved,
-				  ChangeType type,
-				  String content, String contentBefore,
-				  int loc, int locBefore, List<Method> methods) {
-		super();
-		this.newPath = newPath;
-		this.oldPath = oldPath;
-		this.linesAdded = linesAdded;
-		this.linesRemoved = linesRemoved;
-		this.type = type;
-		this.content = content;
-		this.contentBefore = contentBefore;
-		this.loc = loc;
-		this.locBefore = locBefore;
-		this.methods = methods;
-	}
+    public void setCyclo(int cyclo) {
+        this.cyclo = cyclo;
+    }
 
-	public String getNewPath() {
-		return newPath;
-	}
+    public int getCycloBefore() {
+        return cycloBefore;
+    }
 
-	public void setNewPath(String newPath) {
-		this.newPath = newPath;
-	}
+    public void setCycloBefore(int cycloBefore) {
+        this.cycloBefore = cycloBefore;
+    }
 
-	public String getOldPath() {
-		return oldPath;
-	}
+    public String getNewPath() {
+        return newPath;
+    }
 
-	public void setOldPath(String oldPath) {
-		this.oldPath = oldPath;
-	}
+    public void setNewPath(String newPath) {
+        this.newPath = newPath;
+    }
 
-	public int getLinesAdded() {
-		return linesAdded;
-	}
+    public String getOldPath() {
+        return oldPath;
+    }
 
-	public void setLinesAdded(int linesAdded) {
-		this.linesAdded = linesAdded;
-	}
+    public void setOldPath(String oldPath) {
+        this.oldPath = oldPath;
+    }
 
-	public int getLinesRemoved() {
-		return linesRemoved;
-	}
+    public int getLinesAdded() {
+        return linesAdded;
+    }
 
-	public void setLinesRemoved(int linesRemoved) {
-		this.linesRemoved = linesRemoved;
-	}
+    public void setLinesAdded(int linesAdded) {
+        this.linesAdded = linesAdded;
+    }
 
-	public ChangeType getType() {
-		return type;
-	}
+    public int getLinesRemoved() {
+        return linesRemoved;
+    }
 
-	public void setType(ChangeType type) {
-		this.type = type;
-	}
-	public String getContent() {
-		return content;
-	}
+    public void setLinesRemoved(int linesRemoved) {
+        this.linesRemoved = linesRemoved;
+    }
 
-	public void setContent(String content) {
-		this.content = content;
-	}
+    public ChangeType getType() {
+        return type;
+    }
 
-	public String getContentBefore() {
-		return contentBefore;
-	}
+    public void setType(ChangeType type) {
+        this.type = type;
+    }
 
-	public void setContentBefore(String contentBefore) {
-		this.contentBefore = contentBefore;
-	}
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public String getContentBefore() {
+        return contentBefore;
+    }
+
+    public void setContentBefore(String contentBefore) {
+        this.contentBefore = contentBefore;
+    }
 
 }

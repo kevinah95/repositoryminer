@@ -5,10 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 
 import ASTMCore.ASTMSource.CompilationUnit;
 import com.google.gson.Gson;
@@ -22,6 +19,8 @@ import metrics.examcompletemetric.MetricMethod;
 import metrics.examcompletemetric.MetricPackage;
 import metrics.exceptions.UnsupportedMetricException;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
@@ -310,36 +309,117 @@ public class GitSCM implements ISCM {
 			String contentBefore = "";
 
 
-			int loc = 0;
-			int locBefore = 0;
-			if(entry.getNewPath() != DiffEntry.DEV_NULL){
+			int loc = 0, cyclo = 0;
+			int locBefore = 0, cycloBefore = 0;
+			ArrayList<Method> methods = new ArrayList<>();
+			if (entry.getNewPath() != DiffEntry.DEV_NULL) {
 				content = getCommitContent(commit, entry.getNewPath());
 				String filename = getFilename(entry.getNewPath(), entry.getOldPath());
 				String extension = FilenameUtils.getExtension(filename);
-				if(extension.equals("java")){
-					loc = executeAnalyzer(content, Language.JAVA);
+				if (extension.equals("java")) {
+					ImmutablePair<ArrayList<MetricPackage>, ArrayList<MetricPackage>> pair;
+					pair = executeAnalyzer(content, Language.JAVA);
+					HashMap<String, Method> methodsMap = new HashMap<String, Method>();
+
+					ArrayList<MetricPackage> locMetricResult = pair.getLeft();
+					ArrayList<Method> locMethods = getMetricNumberByMethods(locMetricResult, MetricEnum.LOC);
+					for (Method method : locMethods) {
+						loc += method.getLoc();
+						methodsMap.put(method.getName(), method);
+					}
+
+					ArrayList<MetricPackage> cycloMetricResult = pair.getRight();
+					ArrayList<Method> cycloMethods = getMetricNumberByMethods(cycloMetricResult, MetricEnum.CYCLO);
+					for (Method method : cycloMethods) {
+						cyclo += method.getComplexity();
+						if (!methodsMap.containsKey(method.getName())) {
+							methodsMap.put(method.getName(), method);
+						} else {
+							Method newMethod = methodsMap.get(method.getName());
+							newMethod.setComplexity(method.getComplexity());
+							methodsMap.put(method.getName(), newMethod);
+						}
+					}
+
+					methods = new ArrayList<Method>(methodsMap.values());
 				}
 			}
 
-			if(entry.getOldPath() != DiffEntry.DEV_NULL){
+			if (entry.getOldPath() != DiffEntry.DEV_NULL) {
 				contentBefore = getCommitContent(parentCommit, entry.getOldPath());
 				String filename = getFilename(entry.getNewPath(), entry.getOldPath());
 				String extension = FilenameUtils.getExtension(filename);
-				if(extension.equals("java")){
-					locBefore = executeAnalyzer(contentBefore, Language.JAVA);
+				if (extension.equals("java")) {
+					ImmutablePair<ArrayList<MetricPackage>, ArrayList<MetricPackage>> pairBefore;
+					pairBefore = executeAnalyzer(contentBefore, Language.JAVA);
+					ArrayList<MetricPackage> locMetricResult = pairBefore.getLeft();
+					locBefore = getMetricNumber(locMetricResult, MetricEnum.LOC);
+
+					ArrayList<MetricPackage> cycloMetricResult = pairBefore.getRight();
+					cycloBefore = getMetricNumber(cycloMetricResult, MetricEnum.CYCLO);
 				}
 			}
 
 
-
 			Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
-					ChangeType.valueOf(entry.getChangeType().name()), content, contentBefore, loc, locBefore, new ArrayList<Method>());
+					ChangeType.valueOf(entry.getChangeType().name()),
+					content, contentBefore,
+					loc, locBefore,
+					cyclo, cycloBefore,
+					methods);
 
 			analyzeDiff(change, entry);
 			changes.add(change);
 		}
 
 		return changes;
+	}
+
+	private int getMetricNumber(ArrayList<MetricPackage> metricResult, MetricEnum metricType) {
+		int metricAcum = 0;
+		for(MetricPackage p : metricResult){
+			for(MetricClass c: p.getPackageClasses()){
+				for(MetricMethod m: c.getMethods()){
+					switch (metricType){
+						case LOC:
+							metricAcum += m.getLOC();
+							break;
+						case CYCLO:
+							metricAcum += m.getCYCLO();
+							break;
+						default:
+							metricAcum += 0;
+							break;
+					}
+				}
+			}
+		}
+		return metricAcum;
+	}
+
+	private ArrayList<Method> getMetricNumberByMethods(ArrayList<MetricPackage> metricResult, MetricEnum metricType) {
+
+		ArrayList<Method> methods = new ArrayList<>();
+		Method method = new Method();
+		for(MetricPackage p : metricResult){
+			for(MetricClass c: p.getPackageClasses()){
+				for(MetricMethod m: c.getMethods()){
+					method.setName(m.getMethodName());
+					switch (metricType){
+						case LOC:
+							method.setLoc(m.getLOC());
+							break;
+						case CYCLO:
+							method.setComplexity(m.getCYCLO());
+							break;
+						default:
+							break;
+					}
+					methods.add(method);
+				}
+			}
+		}
+		return methods;
 	}
 
 	private String getFilename(String newPath, String oldPath){
@@ -422,7 +502,7 @@ public class GitSCM implements ISCM {
 		}
 	}
 
-	private int executeAnalyzer(String sourceCode, Language language) throws UnsupportedMetricException, IOException, UnsupportedLanguageException, SQLException, ClassNotFoundException {
+	private ImmutablePair<ArrayList<MetricPackage>, ArrayList<MetricPackage>> executeAnalyzer(String sourceCode, Language language) throws UnsupportedMetricException, IOException, UnsupportedLanguageException, SQLException, ClassNotFoundException {
 		//START Repeated
 		ArrayList<OutputMapperObject> CUGast = new ArrayList<>();
 		//Process a single file
@@ -443,26 +523,10 @@ public class GitSCM implements ISCM {
 		pathsJSON.add(jsonAux);
 		gastObjects.add(gastAux);
 		//END Repeated
-		int loc = 0, cyclo = 0;
 		ArrayList<MetricPackage> locMetricResult  = getMetricResult(MetricEnum.LOC.toString(), language, pathsJSON, gastObjects);
-		for(MetricPackage p : locMetricResult){
-			for(MetricClass c: p.getPackageClasses()){
-				for(MetricMethod m: c.getMethods()){
-					loc += m.getLOC();
-				}
-			}
-		}
-
 		ArrayList<MetricPackage> cycloMetricResult  = getMetricResult(MetricEnum.CYCLO.toString(), language, pathsJSON, gastObjects);
-		for(MetricPackage p : cycloMetricResult){
-			for(MetricClass c: p.getPackageClasses()){
-				for(MetricMethod m: c.getMethods()){
-					cyclo += m.getCYCLO();
-				}
-			}
-		}
 
-		return loc;
+		return new ImmutablePair<>(locMetricResult, cycloMetricResult);
 	}
 
 	private ArrayList<MetricPackage> getMetricResult(String metric, Language language, ArrayList<ArrayList<ArrayList<String>>> pathsJSON, ArrayList<ArrayList<ArrayList<CompilationUnit>>> gastObjects) throws UnsupportedMetricException, SQLException, ClassNotFoundException {
