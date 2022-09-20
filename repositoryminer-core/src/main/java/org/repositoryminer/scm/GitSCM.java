@@ -20,7 +20,6 @@ import metrics.examcompletemetric.MetricPackage;
 import metrics.exceptions.UnsupportedMetricException;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.MutablePair;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
@@ -400,10 +399,11 @@ public class GitSCM implements ISCM {
 	private ArrayList<Method> getMetricNumberByMethods(ArrayList<MetricPackage> metricResult, MetricEnum metricType) {
 
 		ArrayList<Method> methods = new ArrayList<>();
-		Method method = new Method();
+
 		for(MetricPackage p : metricResult){
 			for(MetricClass c: p.getPackageClasses()){
 				for(MetricMethod m: c.getMethods()){
+					Method method = new Method();
 					method.setName(m.getMethodName());
 					switch (metricType){
 						case LOC:
