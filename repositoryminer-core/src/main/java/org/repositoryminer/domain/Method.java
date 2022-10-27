@@ -8,18 +8,19 @@ import java.util.List;
 /**
  * Represents a change made in a commit.
  */
+
 public class Method {
     private String name;
     private int loc;
     private int complexity;
 
-    public Method() {
-    }
-
     public Method(String name, int loc, int complexity) {
         this.name = name;
         this.loc = loc;
         this.complexity = complexity;
+    }
+
+    public Method() {
     }
 
     /**

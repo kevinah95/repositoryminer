@@ -22,15 +22,24 @@ public class Change {
     private int locBefore;
     private int cyclo;
     private int cycloBefore;
+    private List<Package> packages;
 
     public Change() {
+    }
+
+    public List<Package> getPackages() {
+        return packages;
+    }
+
+    public void setPackages(List<Package> packages) {
+        this.packages = packages;
     }
 
     public Change(String newPath, String oldPath,
                   int linesAdded, int linesRemoved,
                   ChangeType type,
                   String content, String contentBefore,
-                  int loc, int locBefore, int cyclo, int cycloBefore, List<Method> methods) {
+                  int loc, int locBefore, int cyclo, int cycloBefore, List<Method> methods, List<Package> packages) {
         super();
         this.newPath = newPath;
         this.oldPath = oldPath;
@@ -44,6 +53,7 @@ public class Change {
         this.cyclo = cyclo;
         this.cycloBefore = cycloBefore;
         this.methods = methods;
+        this.packages = packages;
     }
 
     /**
@@ -62,7 +72,10 @@ public class Change {
                     doc.getInteger("lines_added", 0), doc.getInteger("lines_removed", 0),
                     ChangeType.valueOf(doc.getString("type")),
                     doc.getString("content"), doc.getString("content_before"),
-                    doc.getInteger("loc"), doc.getInteger("locBefore"), doc.getInteger("cyclo"), doc.getInteger("cycloBefore"), Method.parseDocuments(doc.get("methods", List.class)));
+                    doc.getInteger("loc"), doc.getInteger("locBefore"),
+                    doc.getInteger("cyclo"), doc.getInteger("cycloBefore"),
+                    Method.parseDocuments(doc.get("methods", List.class)),
+                    Package.parseDocuments(doc.get("packages", List.class)));
             changes.add(change);
         }
         return changes;
@@ -87,7 +100,8 @@ public class Change {
                     .append("locBefore", c.getLocBefore())
                     .append("cyclo", c.getCyclo())
                     .append("cycloBefore", c.getCycloBefore())
-                    .append("methods", Method.toDocumentList(c.getMethods()));
+                    .append("methods", Method.toDocumentList(c.getMethods()))
+                    .append("packages", Package.toDocumentList(c.getPackages()));
             list.add(doc);
         }
         return list;
