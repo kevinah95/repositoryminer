@@ -103,8 +103,8 @@ public class GenericDAO {
 	 *            clause to filter results or null for no filter.
 	 * @return the result of delete operation.
 	 */
-	public DeleteResult deleteMany(Bson whereClause) {
-		return collection.deleteMany(whereClause);
+	public DeleteResult deleteMany(Bson where) {
+		return collection.deleteMany(where);
 	}
 
 	/**

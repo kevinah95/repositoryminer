@@ -1,5 +1,3 @@
-include ":repositoryminer-core", ":repositoryminer-checkstyle", ":repositoryminer-findbugs", 
-":repositoryminer-metrics", ":repositoryminer-pmd", ":repositoryminer-web-scm", ":repositoryminer-technicaldebt",
-":repositoryminer-excomment"
+include ":repositoryminer-core"
 
 rootProject.name = 'repositoryminer'

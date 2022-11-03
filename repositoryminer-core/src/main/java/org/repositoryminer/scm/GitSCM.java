@@ -341,7 +341,7 @@ public class GitSCM implements ISCM {
                     List<Package> packagesForCyclo = packageMapper.convert(cycloMetricResult);
 
                     packages = mergeMethods(packagesForLoc, packagesForCyclo);
-                    packages.stream().forEach(System.out::println);
+
                     ArrayList<Method> cycloMethods = getMetricNumberByMethods(cycloMetricResult, MetricEnum.CYCLO);
                     for (Method method : cycloMethods) {
                         cyclo += method.getComplexity();
