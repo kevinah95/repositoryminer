@@ -18,7 +18,6 @@ public class Change {
     private String content;
     private String contentBefore;
     private int loc;
-    private List<Method> methods;
     private int locBefore;
     private int cyclo;
     private int cycloBefore;
@@ -39,7 +38,7 @@ public class Change {
                   int linesAdded, int linesRemoved,
                   ChangeType type,
                   String content, String contentBefore,
-                  int loc, int locBefore, int cyclo, int cycloBefore, List<Method> methods, List<Package> packages) {
+                  int loc, int locBefore, int cyclo, int cycloBefore, List<Package> packages) {
         super();
         this.newPath = newPath;
         this.oldPath = oldPath;
@@ -52,7 +51,6 @@ public class Change {
         this.locBefore = locBefore;
         this.cyclo = cyclo;
         this.cycloBefore = cycloBefore;
-        this.methods = methods;
         this.packages = packages;
     }
 
@@ -74,7 +72,6 @@ public class Change {
                     doc.getString("content"), doc.getString("content_before"),
                     doc.getInteger("loc"), doc.getInteger("locBefore"),
                     doc.getInteger("cyclo"), doc.getInteger("cycloBefore"),
-                    Method.parseDocuments(doc.get("methods", List.class)),
                     Package.parseDocuments(doc.get("packages", List.class)));
             changes.add(change);
         }
@@ -100,19 +97,10 @@ public class Change {
                     .append("locBefore", c.getLocBefore())
                     .append("cyclo", c.getCyclo())
                     .append("cycloBefore", c.getCycloBefore())
-                    .append("methods", Method.toDocumentList(c.getMethods()))
                     .append("packages", Package.toDocumentList(c.getPackages()));
             list.add(doc);
         }
         return list;
-    }
-
-    public List<Method> getMethods() {
-        return methods;
-    }
-
-    public void setMethods(List<Method> methods) {
-        this.methods = methods;
     }
 
     public int getLoc() {

@@ -319,7 +319,6 @@ public class GitSCM implements ISCM {
             int loc = 0, cyclo = 0;
             int locBefore = 0, cycloBefore = 0;
             List<Package> packages = new ArrayList<>();
-            ArrayList<Method> methods = new ArrayList<>();
             if (entry.getNewPath() != DiffEntry.DEV_NULL) {
                 content = getCommitContent(commit, entry.getNewPath());
                 String filename = getFilename(entry.getNewPath(), entry.getOldPath());
@@ -327,14 +326,12 @@ public class GitSCM implements ISCM {
                 if (extension.equals("java")) {
                     ImmutablePair<List<MetricPackage>, List<MetricPackage>> pair;
                     pair = executeAnalyzer(content, Language.JAVA);
-                    HashMap<String, Method> methodsMap = new HashMap<String, Method>();
 
                     List<MetricPackage> locMetricResult = pair.getLeft();
                     List<Package> packagesForLoc = packageMapper.convert(locMetricResult);
                     ArrayList<Method> locMethods = getMetricNumberByMethods(locMetricResult, MetricEnum.LOC);
                     for (Method method : locMethods) {
                         loc += method.getLoc();
-                        methodsMap.put(method.getName(), method);
                     }
 
                     List<MetricPackage> cycloMetricResult = pair.getRight();
@@ -345,16 +342,7 @@ public class GitSCM implements ISCM {
                     ArrayList<Method> cycloMethods = getMetricNumberByMethods(cycloMetricResult, MetricEnum.CYCLO);
                     for (Method method : cycloMethods) {
                         cyclo += method.getComplexity();
-                        if (!methodsMap.containsKey(method.getName())) {
-                            methodsMap.put(method.getName(), method);
-                        } else {
-                            Method newMethod = methodsMap.get(method.getName());
-                            newMethod.setComplexity(method.getComplexity());
-                            methodsMap.put(method.getName(), newMethod);
-                        }
                     }
-
-                    methods = new ArrayList<Method>(methodsMap.values());
                 }
             }
 
@@ -378,8 +366,7 @@ public class GitSCM implements ISCM {
                     ChangeType.valueOf(entry.getChangeType().name()),
                     content, contentBefore,
                     loc, locBefore,
-                    cyclo, cycloBefore,
-                    methods, packages);
+                    cyclo, cycloBefore, packages);
 
             analyzeDiff(change, entry);
             changes.add(change);
