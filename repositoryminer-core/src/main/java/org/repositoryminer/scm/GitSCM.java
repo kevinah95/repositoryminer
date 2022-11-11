@@ -319,6 +319,7 @@ public class GitSCM implements ISCM {
             int loc = 0, cyclo = 0;
             int locBefore = 0, cycloBefore = 0;
             List<Package> packages = new ArrayList<>();
+            List<Package> packagesBefore = new ArrayList<>();
             if (entry.getNewPath() != DiffEntry.DEV_NULL) {
                 content = getCommitContent(commit, entry.getNewPath());
                 String filename = getFilename(entry.getNewPath(), entry.getOldPath());
@@ -354,10 +355,14 @@ public class GitSCM implements ISCM {
                     ImmutablePair<List<MetricPackage>, List<MetricPackage>> pairBefore;
                     pairBefore = executeAnalyzer(contentBefore, Language.JAVA);
                     List<MetricPackage> locMetricResult = pairBefore.getLeft();
+                    List<Package> packagesForLoc = packageMapper.convert(locMetricResult);
                     locBefore = getMetricNumber(locMetricResult, MetricEnum.LOC);
 
                     List<MetricPackage> cycloMetricResult = pairBefore.getRight();
+                    List<Package> packagesForCyclo = packageMapper.convert(cycloMetricResult);
                     cycloBefore = getMetricNumber(cycloMetricResult, MetricEnum.CYCLO);
+
+                    packagesBefore = mergeMethods(packagesForLoc, packagesForCyclo);
                 }
             }
 
@@ -366,7 +371,7 @@ public class GitSCM implements ISCM {
                     ChangeType.valueOf(entry.getChangeType().name()),
                     content, contentBefore,
                     loc, locBefore,
-                    cyclo, cycloBefore, packages);
+                    cyclo, cycloBefore, packages, packagesBefore);
 
             analyzeDiff(change, entry);
             changes.add(change);

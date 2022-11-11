@@ -22,6 +22,7 @@ public class Change {
     private int cyclo;
     private int cycloBefore;
     private List<Package> packages;
+    private List<Package> packagesBefore;
 
     public Change() {
     }
@@ -34,11 +35,19 @@ public class Change {
         this.packages = packages;
     }
 
+    public List<Package> getPackagesBefore() {
+        return packagesBefore;
+    }
+
+    public void setPackagesBefore(List<Package> packagesBefore) {
+        this.packagesBefore = packagesBefore;
+    }
+
     public Change(String newPath, String oldPath,
                   int linesAdded, int linesRemoved,
                   ChangeType type,
                   String content, String contentBefore,
-                  int loc, int locBefore, int cyclo, int cycloBefore, List<Package> packages) {
+                  int loc, int locBefore, int cyclo, int cycloBefore, List<Package> packages, List<Package> packagesBefore) {
         super();
         this.newPath = newPath;
         this.oldPath = oldPath;
@@ -52,6 +61,7 @@ public class Change {
         this.cyclo = cyclo;
         this.cycloBefore = cycloBefore;
         this.packages = packages;
+        this.packagesBefore = packagesBefore;
     }
 
     /**
@@ -72,7 +82,8 @@ public class Change {
                     doc.getString("content"), doc.getString("content_before"),
                     doc.getInteger("loc"), doc.getInteger("locBefore"),
                     doc.getInteger("cyclo"), doc.getInteger("cycloBefore"),
-                    Package.parseDocuments(doc.get("packages", List.class)));
+                    Package.parseDocuments(doc.get("packages", List.class)),
+                    Package.parseDocuments(doc.get("packagesBefore", List.class)));
             changes.add(change);
         }
         return changes;
@@ -97,7 +108,8 @@ public class Change {
                     .append("locBefore", c.getLocBefore())
                     .append("cyclo", c.getCyclo())
                     .append("cycloBefore", c.getCycloBefore())
-                    .append("packages", Package.toDocumentList(c.getPackages()));
+                    .append("packages", Package.toDocumentList(c.getPackages()))
+                    .append("packagesBefore", Package.toDocumentList(c.getPackagesBefore()));
             list.add(doc);
         }
         return list;
