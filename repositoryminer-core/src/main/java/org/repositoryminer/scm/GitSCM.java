@@ -320,61 +320,66 @@ public class GitSCM implements ISCM {
             int locBefore = 0, cycloBefore = 0;
             List<Package> packages = new ArrayList<>();
             List<Package> packagesBefore = new ArrayList<>();
-            if (entry.getNewPath() != DiffEntry.DEV_NULL) {
-                content = getCommitContent(commit, entry.getNewPath());
-                String filename = getFilename(entry.getNewPath(), entry.getOldPath());
-                String extension = FilenameUtils.getExtension(filename);
-                if (extension.equals("java")) {
-                    ImmutablePair<List<MetricPackage>, List<MetricPackage>> pair;
-                    pair = executeAnalyzer(content, Language.JAVA);
+            try {
+                if (entry.getNewPath() != DiffEntry.DEV_NULL) {
+                    content = getCommitContent(commit, entry.getNewPath());
+                    String filename = getFilename(entry.getNewPath(), entry.getOldPath());
+                    String extension = FilenameUtils.getExtension(filename);
+                    if (extension.equals("java")) {
+                        ImmutablePair<List<MetricPackage>, List<MetricPackage>> pair;
+                        pair = executeAnalyzer(content, Language.JAVA);
 
-                    List<MetricPackage> locMetricResult = pair.getLeft();
-                    List<Package> packagesForLoc = packageMapper.convert(locMetricResult);
-                    ArrayList<Method> locMethods = getMetricNumberByMethods(locMetricResult, MetricEnum.LOC);
-                    for (Method method : locMethods) {
-                        loc += method.getLoc();
-                    }
+                        List<MetricPackage> locMetricResult = pair.getLeft();
+                        List<Package> packagesForLoc = packageMapper.convert(locMetricResult);
+                        ArrayList<Method> locMethods = getMetricNumberByMethods(locMetricResult, MetricEnum.LOC);
+                        for (Method method : locMethods) {
+                            loc += method.getLoc();
+                        }
 
-                    List<MetricPackage> cycloMetricResult = pair.getRight();
-                    List<Package> packagesForCyclo = packageMapper.convert(cycloMetricResult);
+                        List<MetricPackage> cycloMetricResult = pair.getRight();
+                        List<Package> packagesForCyclo = packageMapper.convert(cycloMetricResult);
 
-                    packages = mergeMethods(packagesForLoc, packagesForCyclo);
+                        packages = mergeMethods(packagesForLoc, packagesForCyclo);
 
-                    ArrayList<Method> cycloMethods = getMetricNumberByMethods(cycloMetricResult, MetricEnum.CYCLO);
-                    for (Method method : cycloMethods) {
-                        cyclo += method.getComplexity();
+                        ArrayList<Method> cycloMethods = getMetricNumberByMethods(cycloMetricResult, MetricEnum.CYCLO);
+                        for (Method method : cycloMethods) {
+                            cyclo += method.getComplexity();
+                        }
                     }
                 }
-            }
 
-            if (entry.getOldPath() != DiffEntry.DEV_NULL) {
-                contentBefore = getCommitContent(parentCommit, entry.getOldPath());
-                String filename = getFilename(entry.getNewPath(), entry.getOldPath());
-                String extension = FilenameUtils.getExtension(filename);
-                if (extension.equals("java")) {
-                    ImmutablePair<List<MetricPackage>, List<MetricPackage>> pairBefore;
-                    pairBefore = executeAnalyzer(contentBefore, Language.JAVA);
-                    List<MetricPackage> locMetricResult = pairBefore.getLeft();
-                    List<Package> packagesForLoc = packageMapper.convert(locMetricResult);
-                    locBefore = getMetricNumber(locMetricResult, MetricEnum.LOC);
+                if (entry.getOldPath() != DiffEntry.DEV_NULL) {
+                    contentBefore = getCommitContent(parentCommit, entry.getOldPath());
+                    String filename = getFilename(entry.getNewPath(), entry.getOldPath());
+                    String extension = FilenameUtils.getExtension(filename);
+                    if (extension.equals("java")) {
+                        ImmutablePair<List<MetricPackage>, List<MetricPackage>> pairBefore;
+                        pairBefore = executeAnalyzer(contentBefore, Language.JAVA);
+                        List<MetricPackage> locMetricResult = pairBefore.getLeft();
+                        List<Package> packagesForLoc = packageMapper.convert(locMetricResult);
+                        locBefore = getMetricNumber(locMetricResult, MetricEnum.LOC);
 
-                    List<MetricPackage> cycloMetricResult = pairBefore.getRight();
-                    List<Package> packagesForCyclo = packageMapper.convert(cycloMetricResult);
-                    cycloBefore = getMetricNumber(cycloMetricResult, MetricEnum.CYCLO);
+                        List<MetricPackage> cycloMetricResult = pairBefore.getRight();
+                        List<Package> packagesForCyclo = packageMapper.convert(cycloMetricResult);
+                        cycloBefore = getMetricNumber(cycloMetricResult, MetricEnum.CYCLO);
 
-                    packagesBefore = mergeMethods(packagesForLoc, packagesForCyclo);
+                        packagesBefore = mergeMethods(packagesForLoc, packagesForCyclo);
+                    }
                 }
+
+
+                Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
+                        ChangeType.valueOf(entry.getChangeType().name()),
+                        content, contentBefore,
+                        loc, locBefore,
+                        cyclo, cycloBefore, packages, packagesBefore);
+
+                analyzeDiff(change, entry);
+                changes.add(change);
+            } catch (Exception e){
+                // This try catch continue with the process
             }
 
-
-            Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
-                    ChangeType.valueOf(entry.getChangeType().name()),
-                    content, contentBefore,
-                    loc, locBefore,
-                    cyclo, cycloBefore, packages, packagesBefore);
-
-            analyzeDiff(change, entry);
-            changes.add(change);
         }
 
         return changes;

@@ -59,7 +59,7 @@ public class RepositoryExtractor {
 		repoHandler.insert(repoDoc);
 		repository.setId(repoDoc.getObjectId("_id"));
 
-		extractReferences(repository.getId());
+		//extractReferences(repository.getId());
 		repoHandler.updateOnlyContributors(repository.getId(),
 				Developer.toDocumentList(extractCommits(repository.getId())));
 
