@@ -61,6 +61,8 @@ public class GitSCM implements ISCM {
     private Git git;
     private int branchCounter = 0;
 
+    private String language = "java"; // Change this for C#
+
     @Override
     public SCMType getSCM() {
         return SCMType.GIT;
@@ -328,7 +330,7 @@ public class GitSCM implements ISCM {
                     content = getCommitContent(commit, entry.getNewPath());
                     String filename = getFilename(entry.getNewPath(), entry.getOldPath());
                     String extension = FilenameUtils.getExtension(filename);
-                    if (extension.equals("java")) {
+                    if (extension.equals(language)) {
                         ImmutablePair<List<MetricPackage>, List<MetricPackage>> pair;
                         pair = executeAnalyzer(content, Language.JAVA);
 
@@ -355,7 +357,7 @@ public class GitSCM implements ISCM {
                     contentBefore = getCommitContent(parentCommit, entry.getOldPath());
                     String filename = getFilename(entry.getNewPath(), entry.getOldPath());
                     String extension = FilenameUtils.getExtension(filename);
-                    if (extension.equals("java")) {
+                    if (extension.equals(language)) {
                         ImmutablePair<List<MetricPackage>, List<MetricPackage>> pairBefore;
                         pairBefore = executeAnalyzer(contentBefore, Language.JAVA);
                         List<MetricPackage> locMetricResult = pairBefore.getLeft();
