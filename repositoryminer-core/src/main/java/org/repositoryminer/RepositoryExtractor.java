@@ -41,7 +41,7 @@ public class RepositoryExtractor {
 	 *            parameters for the source-code analysis and persistence
 	 * @throws IOException
 	 */
-	public static void run(RepositoryMiner rm) throws IOException {
+	public static void run(RepositoryMiner rm, String branchName) throws IOException {
 		LOG.info("Starting extraction process.");
 		
 		File repositoryFolder = new File(rm.getPath());
@@ -61,7 +61,7 @@ public class RepositoryExtractor {
 
 		//extractReferences(repository.getId());
 		repoHandler.updateOnlyContributors(repository.getId(),
-				Developer.toDocumentList(extractCommits(repository.getId())));
+				Developer.toDocumentList(extractCommits(repository.getId(), branchName)));
 
 		scm.close();
 		LOG.info("Extraction finished.");
@@ -84,14 +84,14 @@ public class RepositoryExtractor {
 		LOG.info("References extraction process Finished.");
 	}
 
-	private static Set<Developer> extractCommits(ObjectId repository) {
+	private static Set<Developer> extractCommits(ObjectId repository, String branchName) {
 		LOG.info("Start commits extraction process.");
 		
 		CommitDAO documentHandler = new CommitDAO();
 		Set<Developer> contributors = new HashSet<Developer>();
 
 		int skip = 0;
-		List<Commit> commits = scm.getCommits(skip, MAX_COMMITS);
+		List<Commit> commits = scm.getCommits(skip, MAX_COMMITS, true, branchName);
 		while (commits.size() > 0) {
 			for (Commit commit : commits) {
 				commit.setRepository(repository);
@@ -100,7 +100,10 @@ public class RepositoryExtractor {
 			}
 			
 			skip += MAX_COMMITS;
-			commits = scm.getCommits(skip, MAX_COMMITS);
+			// This line is to avoid lack of memory heap
+			commits = null;
+			//System.gc();
+			commits = scm.getCommits(skip, MAX_COMMITS, true, branchName);
 		}
 		
 		LOG.info("Commits extraction process finished.");

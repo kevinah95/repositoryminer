@@ -25,7 +25,7 @@ public class RepositoryMiner {
 	public void mine() throws IOException {
 		RepositoryDAO repoDocHandler = new RepositoryDAO();
 		if (!repoDocHandler.wasMined(key)) {
-			RepositoryExtractor.run(this);
+			RepositoryExtractor.run(this, "refs/heads/master");
 		} else {
 			IncrementalRepositoryExtractor.run(key);
 		}

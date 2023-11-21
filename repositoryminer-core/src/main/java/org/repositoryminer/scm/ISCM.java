@@ -39,7 +39,7 @@ public interface ISCM {
 	 *            max number of fetched commits.
 	 * @return a set of commits;
 	 */
-	public List<Commit> getCommits(int skip, int max);
+	public List<Commit> getCommits(int skip, int max, boolean skip_content, String branchName);
 
 	/**
 	 * Returns the commits with hash in the given list of hashes.
@@ -48,7 +48,7 @@ public interface ISCM {
 	 *            a list of commits hashes.
 	 * @return a set of selected commits
 	 */
-	public List<Commit> getCommits(Set<String> selectedCommits);
+	public List<Commit> getCommits(Set<String> selectedCommits, boolean skip_content);
 
 	/**
 	 * Gets the commit which the HEAD is pointed at.

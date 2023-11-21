@@ -56,6 +56,8 @@ public class GitSCM implements ISCM {
 
     private static final Logger LOG = LoggerFactory.getLogger(GitSCM.class);
 
+    private Repository repository;
+
     private Git git;
     private int branchCounter = 0;
 
@@ -78,7 +80,7 @@ public class GitSCM implements ISCM {
         }
 
         try {
-            Repository repository = repositoryBuilder.setGitDir(repoFolder).readEnvironment().findGitDir().build();
+            repository = repositoryBuilder.setGitDir(repoFolder).readEnvironment().findGitDir().build();
             git = new Git(repository);
         } catch (IOException e) {
             throw new RepositoryMinerException(e);
@@ -133,14 +135,15 @@ public class GitSCM implements ISCM {
     }
 
     @Override
-    public List<Commit> getCommits(int skip, int max) {
+    public List<Commit> getCommits(int skip, int max, boolean skip_content, String branchName) {
         LOG.info("Extracting commits.");
 
         List<Commit> commits = new ArrayList<Commit>();
         try {
-            for (RevCommit revCommit : git.log().all().setSkip(skip).setMaxCount(max).call()) {
+            String treeName = branchName;
+            for (RevCommit revCommit : git.log().add(repository.resolve(treeName)).all().setSkip(skip).setMaxCount(max).call()) {
                 LOG.info(String.format("Analyzing commit %s.", revCommit.getName()));
-                commits.add(processCommit(revCommit));
+                commits.add(processCommit(revCommit, skip_content));
             }
         } catch (GitAPIException | IOException e) {
             close();
@@ -151,7 +154,7 @@ public class GitSCM implements ISCM {
     }
 
     @Override
-    public List<Commit> getCommits(Set<String> selectedCommits) {
+    public List<Commit> getCommits(Set<String> selectedCommits, boolean skip_content) {
         LOG.info("Extracting commits.");
         List<Commit> commits = new ArrayList<Commit>();
 
@@ -159,7 +162,7 @@ public class GitSCM implements ISCM {
             for (RevCommit revCommit : git.log().all().call()) {
                 if (selectedCommits.contains(revCommit.getName())) {
                     LOG.info(String.format("Analyzing commit %s.", revCommit.getName()));
-                    commits.add(processCommit(revCommit));
+                    commits.add(processCommit(revCommit, true));
                 }
             }
         } catch (GitAPIException | IOException e) {
@@ -262,7 +265,7 @@ public class GitSCM implements ISCM {
         git.close();
     }
 
-    private Commit processCommit(RevCommit revCommit) {
+    private Commit processCommit(RevCommit revCommit, boolean skip_content) {
         PersonIdent author = revCommit.getAuthorIdent();
         PersonIdent committer = revCommit.getCommitterIdent();
 
@@ -276,7 +279,7 @@ public class GitSCM implements ISCM {
 
         List<Change> changes = null;
         try {
-            changes = getChangesForCommitedFiles(revCommit.getName());
+            changes = getChangesForCommitedFiles(revCommit.getName(), skip_content);
         } catch (IOException | UnsupportedLanguageException | UnsupportedMetricException | SQLException |
                  ClassNotFoundException e) {
             close();
@@ -287,7 +290,7 @@ public class GitSCM implements ISCM {
                 parents, author.getWhen(), committer.getWhen(), (parents.size() > 1), null);
     }
 
-    private List<Change> getChangesForCommitedFiles(String hash) throws IOException, UnsupportedLanguageException, UnsupportedMetricException, SQLException, ClassNotFoundException {
+    private List<Change> getChangesForCommitedFiles(String hash, boolean skip_content) throws IOException, UnsupportedLanguageException, UnsupportedMetricException, SQLException, ClassNotFoundException {
         RevWalk revWalk = new RevWalk(git.getRepository());
         RevCommit commit = revWalk.parseCommit(ObjectId.fromString(hash));
 
@@ -367,6 +370,10 @@ public class GitSCM implements ISCM {
                     }
                 }
 
+                if(skip_content){
+                    content = "";
+                    contentBefore = "";
+                }
 
                 Change change = new Change(entry.getNewPath(), entry.getOldPath(), 0, 0,
                         ChangeType.valueOf(entry.getChangeType().name()),

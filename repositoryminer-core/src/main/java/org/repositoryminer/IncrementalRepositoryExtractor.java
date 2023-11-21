@@ -105,7 +105,7 @@ public class IncrementalRepositoryExtractor {
 		// saves the new/modified commits
 		if (commits.size() > 0) {
 			List<Document> documents = new ArrayList<>();
-			for (Commit commit : scm.getCommits(commits)) {
+			for (Commit commit : scm.getCommits(commits, true)) {
 				documents.add(commit.toDocument());
 				contributos.add(commit.getAuthor());
 				contributos.add(commit.getCommitter());
